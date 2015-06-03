@@ -1,4 +1,3 @@
-
 class PlayerHuman:
   def __init__(self):
     print "Human initialized."

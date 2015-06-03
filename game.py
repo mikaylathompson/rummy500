@@ -4,7 +4,6 @@ import rummyAI, rummyHuman
 
 # Game
 def runGame():
-    print "New Game."
     # Get players
     players = raw_input("Enter player names, comma seperated. \nStart name with AI if you'd like a computer player.\n").split(', ')
     # Start with zero scores
@@ -27,7 +26,6 @@ def runGame():
         print "Total:", scores
     print "Game over!!"
     print "Final scores:", scores
-
 
 def playRound(players, engines):
     # Deal cards
