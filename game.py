@@ -1,6 +1,6 @@
 # Rummy 500 (simplified)
 import random
-import rummyAI
+import rummyAI, rummyHuman
 
 # Game
 def runGame():
@@ -9,15 +9,17 @@ def runGame():
     players = raw_input("Enter player names, comma seperated. \nStart name with AI if you'd like a computer player.\n").split(', ')
     # Start with zero scores
     scores = {p:0 for p in players}
-    aiPlayers = {p:False for p in players if p[0:2] != 'AI'}
+    engines = {}
     for p in players:
         if p[0:2] == 'AI':
-            aiPlayers[p] = rummyAI.PlayerAI()
+            engines[p] = rummyAI.PlayerAI()
+        else:
+            engines[p] = rummyHuman.PlayerHuman()
 
     while (max(scores.values()) < 500):
         raw_input("Ready for next round?  ")
         # play round
-        newScores = playRound(players, aiPlayers)
+        newScores = playRound(players, engines)
         print "This round:", newScores
         # update scores
         for p in players:
@@ -27,61 +29,41 @@ def runGame():
     print "Final scores:", scores
 
 
-def playRound(players, aiPlayers):
+def playRound(players, engines):
     # Deal cards
     state = deal(players)
     table = {p:[] for p in players}
     while True:
         for p in players:
-            print "\n\n\n",p+"'s Turn\n\n\n"
+            print "\n\n\n"
+            print "="*30
+            print "\n",p+"'s Turn"
             state[p].sort()
-            print p+"'s Hand:", state[p]
-            print "Table:", table
+            #print p+"'s Hand:", state[p]
+            #print "Table:", table
             # ask to select draw/discard
-            if not aiPlayers[p]:
-                humanTurn(p, players, state, table)
-            else:
-                aiTurn(aiPlayers[p], p, players, state, table)
-
+            turn(engines[p], p, players, state, table)
             # check that cards remain
             if len(state[p]) == 0:
                 print "\nRound finished!\n\n"
                 return calculateScores(players, state, table)
 
-def aiTurn(ai, p, players, state, table):
-    # give state[p] and table
-    ai.setState(state[p], table)
-    # ask for draw choice (show discard)
-    ai.chooseDrawCard(state['_discard'][-1])
-    # give new card (update state)
-    ai.addCard(state['_stack'].pop())
-    # ask for move(s)
-    ai.makeMove()
-    # verify/enact moves
-    # ask for discard
-    ai.chooseDiscard()
-    # update state
-    print "ai turn completed"
-
-def humanTurn(p, players, state, table):
-    try:
-        print "Top discard: ", state['_discard'][-1]
-        draw_choice = raw_input("Draw from [b]lind or [d]iscard pile?  ")
-        if draw_choice == 'b':
-            card = state['_stack'].pop()
-        else:
-            card = state['_discard'].pop()
-    except IndexError:
-        print "No discard option."
-        card = state['_stack'].pop()
-    state[p].append(card)
-    print "Hand:",state[p]
-
-    # ask for moves
-    move_choice = raw_input("Enter move (comma seperated cards) or [p]ass.  ").split(', ')
-    while move_choice != ['p']:
+def turn(player, p, players, state, table):
+    player.setState(state[p], table)
+    if len(state['_discard']) > 0:
+        draw_choice = player.chooseDrawCard(state['_discard'][-1])
+    else:
+        player.chooseDrawCard(None)
+        draw_choice = False
+    if draw_choice:
+        newCard = state['_discard'].pop()
+    else:
+        newCard = state['_stack'].pop()
+    state[p].append(newCard)
+    player.addCard(newCard)
+    move_choice = player.makeMove(state[p])
+    while move_choice:
         valid = True
-        # check that cards are in hand
         for c in move_choice:
             if c not in state[p]:
                 print "Invalid move. You don't have", c
@@ -91,33 +73,40 @@ def humanTurn(p, players, state, table):
             print "You must retain a discard."
             valid = False
         if not valid:
-            move_choice = raw_input("Enter move (comma seperated cards) or [p]ass.  ").split(', ')
+            move_choice = player.makeMove(state[p])
             continue
-        # check that they form a valid set
         if not isValidSet(move_choice):
             parasite = False
+            singles = []
             if len(move_choice) < 3:
                 for pp in players:
                     for s in table[pp]:
+                        if len(s) == 1:
+                            singles.append(s)
                         if isValidSet(move_choice + s):
                             parasite = True
                             break
+                if not parasite and len(move_choice) == 1:
+                    for pp in players:
+                        for s in table[pp]:
+                            for ss in singles:
+                                if isValidSet(move_choice + s + ss):
+                                    parasite = True
+                                    break
             if not parasite:
-                move_choice = raw_input("Invalid group. Enter move (comma seperated cards) or [p]ass.  ").split(', ')
+                print "Invalid attempt."
+                move_choice = player.makeMove(state[p])
                 continue
-        # remove from hand
-        for c in move_choice:
+        for c in move_choice: # Choice is apparently valid.
             del(state[p][state[p].index(c)])
-        # add to table
         table[p].append(move_choice)
-        print "Play made!"
-        print "Hand:",state[p]
-        move_choice = raw_input("Enter next move or [p]ass.  ").split(', ')
-
-    discard_choice = raw_input("Select card to discard.  ")
+        print "Group played!"
+        move_choice = player.makeMove(state[p])
+    discard_choice = player.chooseDiscard()
     while discard_choice not in state[p]:
         print "Invalid card. Try again."
-        discard_choice = raw_input("Select card to discard.  ")
+        discard_choice = player.chooseDiscard()
+        continue
     del(state[p][state[p].index(discard_choice)])
     state['_discard'].append(discard_choice)
 
@@ -132,7 +121,6 @@ def deal(players):
     hands['_stack'] = deck[len(players)*7+1:]
     #print hands
     return hands
-
 
 def buildDeck():
     suits = ['h', 'd', 'c', 's']
@@ -169,8 +157,6 @@ def isValidSet(s):
                     numbers[i] = 14
     match = range(min(numbers), max(numbers)+1)
     numbers.sort()
-    print "numbers:", numbers
-    print "match:", match
     return (match == numbers)
 
 def unique(l):

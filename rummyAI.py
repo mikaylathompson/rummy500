@@ -16,9 +16,9 @@ class PlayerAI:
 
   def addCard(self, newCard):
     print "New card is", newCard
-    self.hand += newCard
+    self.hand.append(newCard)
 
-  def makeMove(self):
+  def makeMove(self, hand):
     print "Not making a move."
     return False # no move to make
 
@@ -26,7 +26,7 @@ class PlayerAI:
     print "Discarding", self.hand[-1]
     return self.hand[-1]
 
-  
+
 #def aiTurn(ai, p, players, state, table):
     # give state[p] and table
     # ask for draw choice (show discard)
