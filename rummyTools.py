@@ -51,19 +51,35 @@ def isValidSet(s):
 def isValidParasite(cards, table):
   singles = []
   players = table.keys()
-  players.del(players.find('_stack'))
-  players.del(players.find('_discard'))
+  for p in players:
+    if p[0] == '_':
+      del(players[players.index(p)])
   if len(cards) < 3:
     for player in players:
       for group in table[player]:
+        if type(group) == str:
+          group = [group]
+        elif type(group) == tuple:
+          group = list(group)
         if len(group) == 1:
           singles.append(group)
+        #print "testing:", cards, "with", group
         if isValidSet(cards + group):
           return True
-    if len(cards) == 1:
+    if len(cards) == 1 and len(singles)>0:
+      #print "Testing singles with:", singles
       for player in players:
         for group in table[player]:
+          if type(group) == str:
+            group = [group]
+          elif type(group) == tuple:
+            group = list(group)
           for s in singles:
+            if type(s) != list:
+              s = [s]
+            if s == group:
+              continue
+            #print "testing:", cards, group, s
             if isValidSet(cards + group + s):
               return True
   return False
