@@ -73,25 +73,8 @@ def turn(player, p, players, state, table):
         if not valid:
             move_choice = player.makeMove(state[p])
             continue
-        if not rummyTools.isValidSet(move_choice):
-            parasite = False
-            singles = []
-            if len(move_choice) < 3:
-                for pp in players:
-                    for s in table[pp]:
-                        if len(s) == 1:
-                            singles.append(s)
-                        if rummyTools.isValidSet(move_choice + s):
-                            parasite = True
-                            break
-                if not parasite and len(move_choice) == 1:
-                    for pp in players:
-                        for s in table[pp]:
-                            for ss in singles:
-                                if rummyTools.isValidSet(move_choice + s + ss):
-                                    parasite = True
-                                    break
-            if not parasite:
+        if not (rummyTools.isValidSet(move_choice) or 
+                rummyTools.isValidParasite(move_choice, state)):
                 print "Invalid attempt."
                 move_choice = player.makeMove(state[p])
                 continue

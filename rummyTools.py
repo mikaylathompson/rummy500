@@ -48,3 +48,23 @@ def isValidSet(s):
     numbers.sort()
     return (match == numbers)
 
+def isValidParasite(cards, table):
+  singles = []
+  players = table.keys()
+  players.del(players.find('_stack'))
+  players.del(players.find('_discard'))
+  if len(cards) < 3:
+    for player in players:
+      for group in table[player]:
+        if len(group) == 1:
+          singles.append(group)
+        if isValidSet(cards + group):
+          return True
+    if len(cards) == 1:
+      for player in players:
+        for group in table[player]:
+          for s in singles:
+            if isValidSet(cards + group + s):
+              return True
+  return False
+
