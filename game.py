@@ -56,7 +56,17 @@ def turn(player, p, players, state, table):
     if draw_choice:
         newCard = state['_discard'].pop()
     else:
-        newCard = state['_stack'].pop()
+        try:
+            newCard = state['_stack'].pop()
+        except IndexError:
+            # finished the draw pile.
+            # reshuffle the discard and make it the draw
+            newStack = state['_discard'][:-1]
+            state['_discard'] = [ state['_discard'].pop() ]
+            random.shuffle(newStack)
+            state['_stack'] = newStack
+            newCard = state['_stack'].pop()
+
     state[p].append(newCard)
     player.addCard(newCard)
     move_choice = player.makeMove(state[p])
@@ -73,9 +83,10 @@ def turn(player, p, players, state, table):
         if not valid:
             move_choice = player.makeMove(state[p])
             continue
-        if not (rummyTools.isValidSet(move_choice) or 
-                rummyTools.isValidParasite(move_choice, state)):
+        if not rummyTools.isValidSet(move_choice):
+            if not rummyTools.isValidParasite(move_choice, table):
                 print "Invalid attempt."
+                raw_input("waiting for approval.")
                 move_choice = player.makeMove(state[p])
                 continue
         for c in move_choice: # Choice is apparently valid.
